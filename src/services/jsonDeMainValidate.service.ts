@@ -1400,9 +1400,9 @@ class JSonDeMainValidateService {
         this.validateAsociadoConstancia(params, data['documentoAsociado'], false);
       }
 
-      if (data['cliente']['contribuyente'] == false) {
-        this.errors.push('El Cliente de una Autofactura debe ser Contribuyente en data.cliente.contribuyente');
-      }
+      // if (data['cliente']['contribuyente'] == false) {
+      //   this.errors.push('El Cliente de una Autofactura debe ser Contribuyente en data.cliente.contribuyente');
+      // }
     }
   }
 
