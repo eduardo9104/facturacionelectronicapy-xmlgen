@@ -2941,7 +2941,7 @@ class JSonDeMainValidateService {
    * @param options
    */
   public generateDatosDocumentoAsociadoValidate(params: any, dataDocumentoAsociado: any, data: any) {
-    if (data['tipoTransaccion'] == 11 && !dataDocumentoAsociado['resolucionCreditoFiscal']) {
+    if (data['tipoTransaccion'] == 12 && !dataDocumentoAsociado['resolucionCreditoFiscal']) {
       this.errors.push('Obligatorio informar data.documentoAsociado.resolucionCreditoFiscal');
     }
 
