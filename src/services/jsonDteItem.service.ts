@@ -69,10 +69,15 @@ class JSonDteItemService {
 
         if (data['tipoDocumento'] === 7) {
           if (item['tolerancia']) {
-            gCamItem['cRelMerc'] = item['tolerancia'];
-            gCamItem['dDesRelMerc'] = constanteService.relevanciasMercaderias.filter(
-              (um) => um.codigo === item['tolerancia'],
-            )[0]['descripcion'];
+            gCamItem['cRelMerc'] = +item['tolerancia'];
+            
+            if (constanteService.relevanciasMercaderias.filter(
+              (um) => um.codigo === +item['tolerancia'],
+            ).length > 0) {
+              gCamItem['dDesRelMerc'] = constanteService.relevanciasMercaderias.filter(
+                (um) => um.codigo === +item['tolerancia'],
+              )[0]['descripcion'];
+            }
 
             if (item['toleranciaCantidad']) {
               gCamItem['dCanQuiMer'] = item['toleranciaCantidad'];
@@ -270,10 +275,14 @@ class JSonDteItemService {
 
     jsonResult['dAntPreUniIt'] = 0;
     if (item['anticipo'] && +item['anticipo'] > 0) {
-      jsonResult['dAntPreUniIt'] = parseFloat(item['anticipo']).toFixed(config.decimals);
+      //jsonResult['dAntPreUniIt'] = parseFloat(item['anticipo']).toFixed(config.decimals);  //2026-05-29
 
       if (data.moneda === 'PYG') {
-        jsonResult['dAntPreUniIt'] = parseFloat(jsonResult['dAntPreUniIt']).toFixed(config.pygDecimals);
+        //jsonResult['dAntPreUniIt'] = parseFloat(jsonResult['dAntPreUniIt']).toFixed(config.pygDecimals);  //2026-05-29
+        jsonResult['dAntPreUniIt'] = parseFloat(item['anticipo']).toFixed(config.pygDecimals);
+      } else {
+        //Otras monedas
+        jsonResult['dAntPreUniIt'] = parseFloat(item['anticipo']).toFixed(config.decimals);
       }
     }
 
@@ -289,11 +298,19 @@ class JSonDteItemService {
       let anticipoGlobalAplicado = (data['anticipoGlobal'] * pesoPorc) / 100;
       let anticipoGlobalUnitario = anticipoGlobalAplicado / item['cantidad'];
 
-      jsonResult['dAntGloPreUniIt'] = parseFloat(anticipoGlobalUnitario + '').toFixed(8); //Analizar si no es mejor dejar config.decimals
-
+      /*jsonResult['dAntGloPreUniIt'] = parseFloat(anticipoGlobalUnitario + '').toFixed(8); //Analizar si no es mejor dejar config.decimals
+                                                                                          //o si da error, se puede hacer de la misma forma como hacen los otros
       if (data.moneda === 'PYG') {
         jsonResult['dAntGloPreUniIt'] = parseFloat(jsonResult['dAntGloPreUniIt']).toFixed(config.pygDecimals);
+      }*/
+
+      
+      if (data.moneda === 'PYG') {
+        jsonResult['dAntGloPreUniIt'] = parseFloat(anticipoGlobalUnitario + '').toFixed(config.pygDecimals);
+      } else {
+        jsonResult['dAntGloPreUniIt'] = parseFloat(anticipoGlobalUnitario + '').toFixed(8); 
       }
+
     }
 
     /* dTotOpeItem (EA008)
@@ -329,10 +346,13 @@ class JSonDteItemService {
 
       if (jsonResult['dDescGloItem'] == 0) {
         // Cuando no hay descuento Global por item, entonces utiliza los redondeos establecidos en config, para el dTotOpeItem
-        jsonResult['dTotOpeItem'] = parseFloat(jsonResult['dTotOpeItem'].toFixed(config.decimals));
+        //jsonResult['dTotOpeItem'] = parseFloat(jsonResult['dTotOpeItem'].toFixed(config.decimals));
 
         if (data.moneda === 'PYG') {
           jsonResult['dTotOpeItem'] = parseFloat(jsonResult['dTotOpeItem'].toFixed(config.pygDecimals));
+        } else {
+          //Otras monedas
+          jsonResult['dTotOpeItem'] = parseFloat(jsonResult['dTotOpeItem'].toFixed(config.decimals));
         }
       } else {
         // Cuando hay descuento Global por item, entonces utiliza el maximo permitido para que el calculo al final salga exacto.
@@ -343,9 +363,12 @@ class JSonDteItemService {
       //Si es Autofactura
       jsonResult['dTotOpeItem'] = parseFloat(item['precioUnitario']) * parseFloat(item['cantidad']);
 
-      jsonResult['dTotOpeItem'] = parseFloat(jsonResult['dTotOpeItem'].toFixed(config.decimals));
+      //jsonResult['dTotOpeItem'] = parseFloat(jsonResult['dTotOpeItem'].toFixed(config.decimals));
       if (data.moneda === 'PYG') {
         jsonResult['dTotOpeItem'] = parseFloat(jsonResult['dTotOpeItem'].toFixed(config.pygDecimals));
+      } else {
+        //Otras monedas
+        jsonResult['dTotOpeItem'] = parseFloat(jsonResult['dTotOpeItem'].toFixed(config.decimals));
       }
     }
 
@@ -371,12 +394,17 @@ class JSonDteItemService {
     gCamItem: any,
     config: XmlgenConfig,
   ) {
+    let ivaProporcion = item['ivaBase'];
+    if (typeof item.ivaProporcion != 'undefined') {
+      ivaProporcion = item.ivaProporcion;
+    }
+
     const jsonResult: any = {
       iAfecIVA: item['ivaTipo'], //E731
       dDesAfecIVA: constanteService.codigosAfectaciones.filter((ca) => ca.codigo === +item['ivaTipo'])[0][
         'descripcion'
       ],
-      dPropIVA: item['ivaBase'], //E733
+      dPropIVA: ivaProporcion, //E733
       dTasaIVA: item['iva'], //E734
     };
 
@@ -393,11 +421,11 @@ class JSonDteItemService {
       // Antes de NT13 -- esta opcion esta deprecada, valida solo hasta el 21/05/2023
       if (item['iva'] == 10) {
         jsonResult['dBasGravIVA'] =
-          (gCamItem['gValorItem']['gValorRestaItem']['dTotOpeItem'] * (item['ivaBase'] / 100)) / 1.1;
+          (gCamItem['gValorItem']['gValorRestaItem']['dTotOpeItem'] * (ivaProporcion / 100)) / 1.1;
       }
       if (item['iva'] == 5) {
         jsonResult['dBasGravIVA'] =
-          (gCamItem['gValorItem']['gValorRestaItem']['dTotOpeItem'] * (item['ivaBase'] / 100)) / 1.05;
+          (gCamItem['gValorItem']['gValorRestaItem']['dTotOpeItem'] * (ivaProporcion / 100)) / 1.05;
       }
 
       if (config.test == true) {
@@ -413,8 +441,8 @@ class JSonDteItemService {
         */
         if (new Date().getTime() >= new Date('2023-04-21').getTime()) {
           jsonResult['dBasGravIVA'] =
-            (100 * gCamItem['gValorItem']['gValorRestaItem']['dTotOpeItem'] * item['ivaBase']) /
-            (10000 + item['iva'] * item['ivaBase']);
+            (100 * gCamItem['gValorItem']['gValorRestaItem']['dTotOpeItem'] * ivaProporcion) /
+            (10000 + item['iva'] * ivaProporcion);
         }
       }
 
@@ -429,8 +457,8 @@ class JSonDteItemService {
           Si E731 = 2 o 3 este campo es igual 0
         */
         jsonResult['dBasGravIVA'] =
-          (100 * gCamItem['gValorItem']['gValorRestaItem']['dTotOpeItem'] * item['ivaBase']) /
-          (10000 + item['iva'] * item['ivaBase']);
+          (100 * gCamItem['gValorItem']['gValorRestaItem']['dTotOpeItem'] * ivaProporcion) /
+          (10000 + item['iva'] * ivaProporcion);
       }
       ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -473,8 +501,8 @@ class JSonDteItemService {
           */
 
           jsonResult['dBasExe'] =
-            (100 * gCamItem['gValorItem']['gValorRestaItem']['dTotOpeItem'] * (100 - item['ivaBase'])) /
-            (10000 + item['iva'] * item['ivaBase']);
+            (100 * gCamItem['gValorItem']['gValorRestaItem']['dTotOpeItem'] * (100 - ivaProporcion)) /
+            (10000 + item['iva'] * ivaProporcion);
 
           //Redondeo inicial a 2 decimales
           if (jsonResult['dBasExe']) {
@@ -500,8 +528,8 @@ class JSonDteItemService {
         */
 
         jsonResult['dBasExe'] =
-          (100 * gCamItem['gValorItem']['gValorRestaItem']['dTotOpeItem'] * (100 - item['ivaBase'])) /
-          (10000 + item['iva'] * item['ivaBase']);
+          (100 * gCamItem['gValorItem']['gValorRestaItem']['dTotOpeItem'] * (100 - ivaProporcion)) /
+          (10000 + item['iva'] * ivaProporcion);
 
         //Redondeo inicial a 2 decimales
         if (jsonResult['dBasExe']) {

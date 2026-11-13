@@ -730,8 +730,7 @@ class JSonDeMainValidateService {
       this.errors.push(
         "Pais '" +
           data['cliente']['pais'] +
-          "' del Cliente en data.cliente.pais no encontrado. Valores: " +
-          constanteService.paises.map((a: any) => a.codigo + '-' + a.descripcion),
+          "' del Cliente en data.cliente.pais no encontrado."
       );
     }
 
@@ -744,11 +743,15 @@ class JSonDeMainValidateService {
     if (!data['cliente']['contribuyente'] && data['cliente']['tipoOperacion']) {
       //No es contribuyente
       //Obligatorio completar D210
-
       if (!data['cliente']['contribuyente'] && data['cliente']['tipoOperacion'] != 4) {
         if (!data['cliente']['documentoTipo']) {
           //Val.: 59
           this.errors.push('Debe informar el Tipo de Documento del Cliente en data.cliente.documentoTipo');
+        } else {
+          let documentoTipoDS = constanteService.tiposDocumentosReceptor.filter((tdr) => tdr.codigo === +data['cliente']['documentoTipo'])
+          if (documentoTipoDS.length <= 0) {
+            this.errors.push('Tipo de Documento del Cliente en data.cliente.documentoTipo no válido');
+          }
         }
 
         //Cuando el campo puede ser un número, y se admite el valor cero, mejor preguntar de ésta forma
@@ -771,6 +774,15 @@ class JSonDeMainValidateService {
         }
       }
     }
+
+    //Este es solo una validacion por si coloca un documentoTipo erróneo, independientemente asi tiene que tener o no el campo
+    if (data['cliente']['documentoTipo']) {
+      let documentoTipoDS = constanteService.tiposDocumentosReceptor.filter((tdr) => tdr.codigo === +data['cliente']['documentoTipo'])
+      if (documentoTipoDS.length <= 0) {
+        this.errors.push('Tipo de Documento del Cliente ' + data['cliente']['documentoTipo'] + ' en data.cliente.documentoTipo no válido');
+      }
+    }
+
 
     if (
       !data['cliente']['contribuyente'] &&
@@ -943,24 +955,34 @@ class JSonDeMainValidateService {
       }
     }
 
-    if (data['cliente']['celular']) {
-      if (!(data['cliente']['celular'].length >= 10 && data['cliente']['celular'].length <= 20)) {
-        this.errors.push(
-          "El valor '" +
-            data['cliente']['celular'] +
-            "' en data.cliente.celular debe tener una longitud de 10 a 20 caracteres",
-        );
+    const validateNumeroCelular = (celular: any, errors: any) => {
+      if (!(celular.length >= 10 && celular.length <= 20)) {
+        errors.push("El valor '" + celular + "' en data.cliente.celular debe tener una longitud de 10 a 20 caracteres");
       } else {
         if (
-          (data['cliente']['celular'] + '').includes('(') ||
-          (data['cliente']['celular'] + '').includes(')') ||
-          (data['cliente']['celular'] + '').includes('[') ||
-          (data['cliente']['celular'] + '').includes(']')
+          (celular + '').includes('(') ||
+          (celular + '').includes(')') ||
+          (celular + '').includes('[') ||
+          (celular + '').includes(']') ||
+          (celular + '').includes(';') ||
+          (celular + '').includes('=') ||
+          (celular + '').includes('/') ||
+          (celular + '').includes('\\')
         ) {
-          this.errors.push(
-            "El valor '" + data['cliente']['celular'] + "' en data.cliente.celular no puede contener () o []",
-          );
+          errors.push("El valor '" + celular + "' en data.cliente.celular no puede contener (), [] o ;");
         }
+      }
+    };
+
+    if (data['cliente']['celular']) {
+      //Primero verificar si el celular tiene comas
+      if ((data['cliente']['celular'] + '').includes(',')) {
+        let celulares = data['cliente']['celular'].split(',');
+        for (let i = 0; i < celulares.lenght; i++) {
+          validateNumeroCelular(celulares[i], this.errors);
+        }
+      } else {
+        validateNumeroCelular(data['cliente']['celular'], this.errors);
       }
     }
 
@@ -1286,7 +1308,7 @@ class JSonDeMainValidateService {
   }
 
   private generateDatosEspecificosPorTipoDE_NotaCreditoDebitoValidate(params: any, data: any) {
-    if (!(data['notaCreditoDebito']['motivo'] && data['notaCreditoDebito']['motivo'])) {
+    if (!(data['notaCreditoDebito'] && data['notaCreditoDebito']['motivo'])) {
       this.errors.push('Debe completar el motivo para la nota de crédito/débito en data.notaCreditoDebito.motivo');
     } else {
       if (
@@ -1314,19 +1336,21 @@ class JSonDeMainValidateService {
           );
         }
       }
+
+      if (
+        constanteService.remisionesMotivos.filter((um: any) => um.codigo === +data['remision']['motivo']).length == 0
+      ) {
+        this.errors.push(
+          "Motivo de la Remisión '" +
+            data['remision']['motivo'] +
+            "' en data.remision.motivo no encontrado. Valores: " +
+            constanteService.remisionesMotivos.map((a: any) => a.codigo + '-' + a.descripcion),
+        );
+      }
     }
 
     if (!(data['remision'] && data['remision']['tipoResponsable'])) {
       this.errors.push('No fue pasado el Tipo de Responsable de la Remisión en data.remision.tipoResponsable.');
-    }
-
-    if (constanteService.remisionesMotivos.filter((um: any) => um.codigo === +data['remision']['motivo']).length == 0) {
-      this.errors.push(
-        "Motivo de la Remisión '" +
-          data['remision']['motivo'] +
-          "' en data.remision.motivo no encontrado. Valores: " +
-          constanteService.remisionesMotivos.map((a: any) => a.codigo + '-' + a.descripcion),
-      );
     }
 
     if (!data['remision']['kms']) {
@@ -2001,6 +2025,28 @@ class JSonDeMainValidateService {
         );
       }
     }
+
+    //Nuevas validaciones
+    if (data['detalleTransporte'] && data['detalleTransporte']['paisDestino']) {
+      if (constanteService.paises.filter((pais: any) => pais.codigo === data['detalleTransporte']['paisDestino']).length == 0) {
+        this.errors.push(
+          "Pais '" +
+            data['detalleTransporte']['paisDestino'] +
+            "' en detalleTransporte.paisDestino no encontrado."
+        );
+      }
+    }
+
+    if (data['detalleTransporte'] && data['detalleTransporte']['transportista'] && data['detalleTransporte']['transportista']['pais']) {
+      if (constanteService.paises.filter((pais: any) => pais.codigo === data['detalleTransporte']['transportista']['pais']).length == 0) {
+        this.errors.push(
+          "Pais '" +
+            data['detalleTransporte']['transportista']['pais'] +
+            "' en detalleTransporte.transportista.pais no encontrado."
+        );
+      }
+    }
+
     if (data['tipoDocumento'] == 7) {
       if (!data['detalleTransporte']['inicioEstimadoTranslado']) {
         this.errors.push('Obligatorio informar data.transporte.inicioEstimadoTranslado. Formato yyyy-MM-dd');
@@ -2760,8 +2806,7 @@ class JSonDeMainValidateService {
         this.errors.push(
           "Pais '" +
             data['detalleTransporte']['transportista']['pais'] +
-            "' del Cliente en data.transporte.transportista.pais no encontrado. Valores: " +
-            constanteService.paises.map((a: any) => a.codigo + '-' + a.descripcion),
+            "' del Cliente en data.transporte.transportista.pais no encontrado."
         );
       }
     }
@@ -2874,7 +2919,7 @@ class JSonDeMainValidateService {
     ) {
       if (
         constanteService.unidadesMedidas.filter(
-          (um) => um.codigo === data['complementarios']['carga']['unidadMedidaVolumenTotal'],
+          (um) => um.codigo === +data['complementarios']['carga']['unidadMedidaVolumenTotal'],
         ).length == 0
       ) {
         this.errors.push(
@@ -2893,7 +2938,7 @@ class JSonDeMainValidateService {
     ) {
       if (
         constanteService.unidadesMedidas.filter(
-          (um) => um.codigo === data['complementarios']['carga']['unidadMedidaPesoTotal'],
+          (um) => um.codigo === +data['complementarios']['carga']['unidadMedidaPesoTotal'],
         ).length == 0
       ) {
         this.errors.push(
@@ -2912,7 +2957,7 @@ class JSonDeMainValidateService {
     ) {
       if (
         constanteService.caracteristicasCargas.filter(
-          (um) => um.codigo === data['complementarios']['carga']['caracteristicaCarga'],
+          (um) => um.codigo === +data['complementarios']['carga']['caracteristicaCarga'],
         ).length == 0
       ) {
         this.errors.push(

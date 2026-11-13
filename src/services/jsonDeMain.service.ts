@@ -521,6 +521,10 @@ class JSonDeMainService {
         if (typeof item.iva_base != 'undefined') {
           item.ivaBase = item.iva_base;
         }
+        if (typeof item.iva_proporcional != 'undefined') {
+          item.ivaProporcion = item.iva_proporcional;
+          delete item.iva_proporcional;
+        }
         if (item.numero_serie) {
           item.numeroSerie = item.numero_serie;
         }
@@ -1362,9 +1366,19 @@ class JSonDeMainService {
     if (data['cliente']['telefono']) {
       this.json['rDE']['DE']['gDatGralOpe']['gDatRec'].dTelRec = (data['cliente']['telefono'] + '').trim();
     }
-    if (data['cliente']['celular']) {
+    /*    if (data['cliente']['celular']) {
       this.json['rDE']['DE']['gDatGralOpe']['gDatRec'].dCelRec = (data['cliente']['celular'] + '').trim();
+    }*/
+    if (data['cliente']['celular']) {
+      let celular = data['cliente']['celular'].trim();
+      if (celular.indexOf(',') > -1) {
+        //Si el Celular tiene , (coma) entonces va enviar solo el primer valor, ya que SIFEN no acepta Comas
+        celular = celular.split(',')[0].trim();
+      }
+
+      this.json['rDE']['DE']['gDatGralOpe']['gDatRec'].dCelRec = celular;
     }
+
     if (data['cliente']['email']) {
       let email = new String(data['cliente']['email']); //Hace una copia, para no alterar.
 

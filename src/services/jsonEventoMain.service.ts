@@ -618,22 +618,20 @@ class JSonEventoMainService {
       throw new Error('El Motivo del Evento en data.motivo debe tener una longitud entre 5 y 500 caracteres');
     }
 
-    /*if (constanteService.tipoReceptor.filter((um: any) => um.codigo === +data['tipoReceptor']).length == 0) {
-      throw new Error(
-        "Tipo de Receptor '" +
-          data['tipoReceptor'] +
-          "' en data.tipoReceptor no encontrado. Valores: " +
-          constanteService.tipoReceptor.map((a: any) => a.codigo + '-' + a.descripcion),
-      );
-    }*/
-
     if (!data['pais']) {
       throw new Error('Debe especificar el Pais del Receptor en data.pais');
     }
     if (!(data['pais'].length >= 3 && data['pais'].length <= 3)) {
       throw new Error('El Pais del Receptor en data.pais debe tener una longitud de 3 caracteres');
     }
-    let paisDescripcion: any = constanteService.paises.filter((pais) => pais.codigo === data['pais'])[0].descripcion;
+    let paisDescripcion: any = undefined;
+    let paisEncontrado = constanteService.paises.filter((pais) => pais.codigo === data['pais']);
+    if (paisEncontrado && paisEncontrado[0]) {
+      paisDescripcion = paisEncontrado[0].descripcion;
+    }
+    if (!paisDescripcion) {
+      paisDescripcion = data['paisDescripcion'];
+    }
 
     if (!data['tipoOperacion']) {
       throw new Error('Debe especificar el Tipo de Operación en data.tipoOperacion 1-B2B, 2-B2C o 4-B2F');
@@ -648,14 +646,6 @@ class JSonEventoMainService {
         }
       }
     }
-
-    /*if (data['contribuyente']) {
-      if (!data['tipoContribuyente']) {
-        throw new Error(
-          'Debe especificar el Tipo de Contribuyente en data.tipoContribuyente 1-Persona Física o 2-Persona Jurídica',
-        );
-      }
-    }*/
 
     if (data['contribuyente']) {
       if (!data['tipoReceptor']) {
@@ -714,8 +704,10 @@ class JSonEventoMainService {
       if (!data['numeroCasa']) {
         throw new Error('Debe especificar el numero de casa en data.numeroCasa');
       } else {
-        if (!((data['numeroCasa']+"").length >= 1 && (data['numeroCasa']+"").length <= 6)) {
-          throw new Error('El Número de Casa del Cliente en data.numeroCasa debe tener una longitud entre 1 y 6 caracteres');
+        if (!((data['numeroCasa'] + '').length >= 1 && (data['numeroCasa'] + '').length <= 6)) {
+          throw new Error(
+            'El Número de Casa del Cliente en data.numeroCasa debe tener una longitud entre 1 y 6 caracteres',
+          );
         }
       }
     }
@@ -727,7 +719,7 @@ class JSonEventoMainService {
     if (data['departamento']) {
       let objDepartamento: any = constanteService.departamentos.filter((dep) => dep.codigo === +data['departamento']);
 
-      if (objDepartamento.legth <= 0) {
+      if (objDepartamento.length <= 0) {
         throw new Error("No se encontro el Departamento '" + data['departamento'] + "'");
       }
 
